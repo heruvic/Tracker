@@ -1,0 +1,688 @@
+<html>
+	<head>
+		<style type="text/css">
+			div.counter {
+				width: 100%;
+				border-style:solid;
+				border-width:5px;
+				border-color:black;
+				color: black;
+				padding:10px;
+				background-color: #d8da3d; 
+			}
+    
+			div.trading_platform {
+				margin-top: 3%;left;
+				width: 100%;
+				border-style:solid;
+				border-width:5px;
+				border-color:black;
+				color: black;
+				padding:10px;
+				background-color: #d8da3d;
+			}
+  
+			div.to_do {
+				width: 60%;
+				border-style:solid;
+				border-width:5px;
+				border-color:black;
+				color: black;
+				padding:10px;
+				background-color: #d8da3d;
+				float:right; 
+			}
+  
+			div.window {
+				position:absolute;
+				left:0;
+				top:0;
+				width:400px;
+				height:260px;
+				display:none;
+				z-index:9999;
+				padding:20px;
+			}
+
+			#dialog {
+				width:420px; 
+				height:280px;
+				padding:10px;
+				background-color:#ffffff;
+	
+			}
+
+			#mask {
+				position:absolute;
+				left:0;
+				top:0;
+				z-index:9000;
+				background-color:#000;
+				display:none;
+			}
+		</style>
+	
+
+		<link 	rel="stylesheet"  
+				href="http://jquerymobile.com/test/css/themes/default/" />
+		<link 	rel="stylesheet" 
+				href="http://jquerymobile.com/test/docs/_assets/css/jqm-docs.css"/>
+		<script src="http://jquerymobile.com/test/js/jquery.js"></script>
+		<script src="http://jquerymobile.com/test/experiments/themeswitcher/jquery.mobile.themeswitcher.js"></script>
+		<script src="http://jquerymobile.com/test/docs/_assets/js/jqm-docs.js"></script>
+		<script src="http://jquerymobile.com/test/js/"></script>
+
+	<script type="text/javascript"> 
+ 
+	var clicked;
+	var todo_number = 1;
+	
+	/**
+	  *
+	  */
+	function update_UI() {
+		read_days();
+		read_trade();
+		read_todo();
+	}
+
+	/**
+	  *
+	  */
+	function read_days() {
+		$.get('http://192.168.0.30/james/read_from_db.php?extraArgs={"params": ["id", "day_count", "last_updated"]}&table=days', function(data) {			
+			var results = JSON.parse(data);
+			$('#NO_DAYS').val(results[0].day_count);
+			$('#LAST_UPDATED').val(results[0].last_updated);
+		});
+	}
+
+	/**
+	  *
+	  */	
+	function save_days(count, last_updated) {
+		$.get('http://192.168.0.30/james/write_to_db.php?status=alter&paramName=day_count&table=days&paramValue=' + count);
+		$.get('http://192.168.0.30/james/write_to_db.php?status=alter&paramName=last_updated&table=days&paramValue=' + last_updated);
+	}
+
+	/**
+	  *
+	  */	
+	function read_trade() {
+		$.get('http://192.168.0.30/james/read_from_db.php?extraArgs={"params": ["category", "count"]}&table=trade', function(data) {
+			var results = JSON.parse(data);
+			$('#MEDICINE_SESSIONS').val(results[0].count);
+			$('#SIDE_PROJECT_SESSION').val(results[1].count);
+			$('#VIOLIN_SESSIONS').val(results[2].count);
+			$('#WORKOUT_SESSIONS').val(results[3].count);
+			calculate_hours_available();	
+		});
+	}
+
+	/**
+	  *
+	  */	
+	function save_trade(category, count) {
+		$.get('http://192.168.0.30/james/write_to_db.php?status=alter&table=trade&category=' + category + '&count=' + count);
+	}
+	
+	/**
+	  *
+	  */	
+	function read_todo() {
+		$.get('http://192.168.0.30/james/read_from_db.php?extraArgs={"params": ["number", "category", "text"]}&table=todo', function(data) {			
+			var results = JSON.parse(data);
+			
+			var i;
+			for (i=0; i<results.num; i++) {
+				if (results[i].number > todo_number) {
+					todo_number = results[i].number;
+				}
+				
+				add_html(results[i].category, results[i].text);
+			}
+		});
+	}
+	
+	/**
+	  *
+	  */	
+	function save_todo(category, text) { 
+		$.get('http://192.168.0.30/james/write_to_db.php?status=new&table=todo&category=' + category + '&number=' + todo_number + '&text="' + text + '"');
+	}
+	
+	/**
+	  *
+	  */
+	function delete_todo(number, category) {
+		$.get('http://192.168.0.30/james/write_to_db.php?status=delete&table=todo&category=' + category + '&number=' + number);
+	}
+		
+	/**
+	  *
+	  */
+	$(document).ready(function() {
+		update_UI();
+
+    	//select all the a tag with name equal to modal
+		$('a[name=modal]').click(function(e) {
+			//Cancel the link behavior
+			e.preventDefault();
+		
+			//Get the A tag
+			var id = $(this).attr('href');
+	
+			//Get the screen height and width
+			var maskHeight = $(document).height();
+			var maskWidth = $(window).width();
+	
+			//Set heigth and width to mask to fill up the whole screen
+			$('#mask').css({'width':maskWidth,'height':maskHeight});
+		
+			//transition effect		
+			$('#mask').fadeIn(1000);	
+			$('#mask').fadeTo("slow",0.8);	
+	
+			//Get the window height and width
+			var winH = $(window).height();
+			var winW = $(window).width();
+				
+			//Set the popup window to center
+			$(id).css('top',  winH/2-$(id).height()/2);
+			$(id).css('left', winW/2-$(id).width()/2);
+	
+			//transition effect
+			$(id).fadeIn(2000); 
+		
+			clicked = $(this).parent().parent().attr('id');
+		});
+	
+		//if close button is clicked
+		$('.close').click(function (e) {
+			//Cancel the link behavior
+			e.preventDefault();
+			$('#text_todo').val("");
+			$('#mask').hide();
+			$('.window').hide();
+		});		
+	
+		$('.save').click(function (e) {
+			var todoString = $('#todo_text').val();
+		
+			if (todoString === "") {
+				alert("No text was entered!");
+				return;
+			}
+		
+			todo_number++;
+			save_todo(clicked, todoString);
+			
+			add_html(clicked, todoString);
+			e.preventDefault();
+			$('#mask').hide();
+			$('.window').hide();
+			$('#cristina').val("");
+		});
+	});
+
+	/**
+	  *
+	  */
+	function add_html(id, text) {
+		var p = document.createElement("p");
+		var label = document.createElement("label");
+		label.innerHTML = text;
+		var a = document.createElement("a");
+		a.setAttribute("href", "#");
+		a.setAttribute("class", "ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a");
+		a.setAttribute("data-theme", "b");
+		a.setAttribute("style", "width:auto;float:right;margin:-0.2em -2px;");
+		a.innerHTML = "complete";
+		a.stamp = todo_number;
+  
+		a.onclick = function() {
+			this.parentNode.parentNode.removeChild( this.parentNode );
+			delete_todo(this.stamp, id);
+		};
+  
+		p.appendChild(label);
+		p.appendChild(a);
+		document.getElementById(id).children[1].appendChild(p);
+	}
+
+	/**
+	  *
+	  */
+	function return_date() {
+		var currentTime = new Date();
+		return currentTime.toUTCString();
+	}
+
+	function reset() {
+		$('#NO_DAYS').val("0");
+		var date_update = return_date();
+		$('#LAST_UPDATED').val(date_update);    
+		save_days(0, date_update);  
+	}
+	
+	/**
+	  *
+	  */
+	function increment() {
+		var newCount = parseInt($('#NO_DAYS').val()) + 1;
+		$('#NO_DAYS').val(newCount);
+		var date_update = return_date();
+		$('#LAST_UPDATED').val(date_update);  
+		save_days(newCount, date_update);
+	};
+
+	/**
+	  *
+	  */
+	function increment_hours(id) {
+		var newVal = parseInt($(id).val()) + 1;
+		
+
+		$(id).val(newVal);
+		var cat = "";
+		if (id == '#MEDICINE_SESSIONS') {
+			cat = 'medicine';
+		} else if (id == '#WORKOUT_SESSIONS') {
+			cat = 'workout';
+		} else if (id == '#SIDE_PROJECT_SESSION') {
+			cat = 'side';
+		} else if (id == '#VIOLIN_SESSIONS') {
+			cat = 'violin';
+		}
+		save_trade(cat, newVal);
+		
+		calculate_hours_available();
+	};
+
+	/**
+	  *
+	  */
+	function calculate_hours_available() {
+		var medHours = $('#MEDICINE_SESSIONS').val();
+		var workoutHours = $('#WORKOUT_SESSIONS').val();
+		var sideHours = $('#SIDE_PROJECT_SESSION').val();
+		var violinHours = $('#VIOLIN_SESSIONS').val();
+	 
+		var cont = 1;
+		var hrs = 0;
+	 
+		while (cont) {
+			if ( medHours > 0 && sideHours > 2 && violinHours > 0) {
+				medHours--;
+				violinHours--;
+				sideHours-=2;
+				hrs++;
+			} else if ( medHours > 1 && sideHours > 0 && workoutHours > 0) {
+				medHours-=2;
+				sideHours--;
+				workoutHours--;
+				hrs++;
+			} else if (violinHours > 1 && sideHours > 1 && medHours > 0) {
+				violinHours-=2;
+				sideHours-=2;
+				medHours--;
+				hrs++;
+			} else if (workoutHours > 3) {
+				workoutHours-=4;
+				hrs++;
+			} else if (sideHours > 3) {
+				sideHours-=4;
+				hrs++;
+			} else if (medHours > 3) {
+				medHours-=4;
+				hrs++;
+			} else {
+				cont = 0;
+			}
+		}
+		$('#HOURS_AVAILABLE').val(hrs);
+	};
+
+	/**
+	  *
+	  */
+	function decrement_hours(id, decrementVal) {
+		var newHours = parseInt($(id).val()) - decrementVal;
+		$(id).val(newHours);
+		
+		var cat = "";
+		if (id == '#MEDICINE_SESSIONS') {
+			cat = 'medicine';
+		} else if (id == '#WORKOUT_SESSIONS') {
+			cat = 'workout';
+		} else if (id == '#SIDE_PROJECT_SESSION') {
+			cat = 'side';
+		} else if (id == '#VIOLIN_SESSIONS') {
+			cat = 'violin';
+		}
+		save_trade(cat, newHours);
+	}
+
+	/**
+	  *
+	  */
+	function decrement_free_hours () {
+		var hours = $('#HOURS_AVAILABLE').val();
+		var newHours = parseInt(hours);
+   
+		if (newHours == 0) {
+			alert('no hours to choose from');
+			return;
+		}
+   
+		$('#HOURS_AVAILABLE').val(newHours - 1);
+   
+		var medHours = $('#MEDICINE_SESSIONS').val();
+		var workoutHours = $('#WORKOUT_SESSIONS').val();
+		var sideHours = $('#SIDE_PROJECT_SESSION').val();
+		var violinHours = $('#VIOLIN_SESSIONS').val();
+   
+   	    if ( medHours > 0 && sideHours > 2 && violinHours > 0) {
+		    decrement_hours('#MEDICINE_SESSIONS', 1);
+			decrement_hours('#VIOLIN_SESSIONS', 1);
+			decrement_hours('#SIDE_PROJECT_SESSION', 2);
+      	} else if ( medHours > 1 && sideHours > 0 && workoutHours > 0) {
+			decrement_hours('#MEDICINE_SESSIONS', 2);
+			decrement_hours('#WORKOUT_SESSIONS', 1);
+			decrement_hours('#SIDE_PROJECT_SESSION', 1);
+        } else if (violinHours > 1 && sideHours > 1 && medHours > 0) {
+			decrement_hours('#VIOLIN_SESSIONS', 2);
+			decrement_hours('#MEDICINE_SESSIONS', 1);
+			decrement_hours('#SIDE_PROJECT_SESSION', 2);
+		} else if (workoutHours > 3) {
+			decrement_hours('#WORKOUT_SESSIONS', 4);
+		} else if (sideHours > 3) {
+			decrement_hours('#SIDE_PROJECT_SESSION', 4);
+		} else if (medHours > 3) {
+			decrement_hours('#MEDICINE_SESSIONS', 4);
+		} 
+	};
+
+	</script>
+</head>
+
+<body>   
+
+    <!-- Day counter -->
+	<div style="width:35%;float:left;">
+		<div class="counter">
+			<form action="form_action.asp" method="get">
+				Number of Days: <input type="text" name="name" id="NO_DAYS" value="0" class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" disabled="disabled" style="width:6%;">
+				Last Updated: <input type="text" name="name" id="LAST_UPDATED" value="0" class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" disabled="disabled" style="width:50%;">
+			</form>
+
+			<div style="width:50%;background-color: #d8da3d;">
+				<a 	href="#" 
+					class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+					data-theme="a" 
+					style="float:left;width:45%;" 
+					onclick="increment();">Increment Days
+				</a>
+       
+				<a	href="#" 
+					class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+					data-theme="a" 
+					style="width:40%;float:right;" 
+					onclick="reset();">Reset
+				</a>
+				<div style="clear:both;"></div> 
+			</div>
+		</div>
+
+		<!-- Trading Platform -->
+		<div class="trading_platform">
+			<form method="get">
+				<table>
+					<tr> 
+						<td>
+							Medicine:
+						</td>
+						
+						<td> 
+							<input	type="text" 
+									name="name" 
+									id="MEDICINE_SESSIONS" 
+									value="0" 
+									class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" 
+									disabled="disabled" 
+									style="width:30%;"> 
+						</td>
+						<td> 	
+							<a 	href="#" 
+								class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+								data-theme="a" 
+								style=""
+								onclick="increment_hours('#MEDICINE_SESSIONS');">+1</a>                    
+						</td>
+					</tr>
+					<tr>
+						<td> 
+							Side Project:
+						</td> 
+						<td> 
+							<input 	type="text" 
+									name="name" 
+									id="SIDE_PROJECT_SESSION" 
+									value="0" 
+									class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" 
+									disabled="disabled" 
+									style="width:30%;"> 
+						</td>
+						<td> 	
+							<a 	href="#" 
+								class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+								data-theme="a" 
+								style=""
+								onclick="increment_hours('#SIDE_PROJECT_SESSION');">+1</a>      
+						</td>
+					</tr>
+					<tr>
+						<td>
+							Violin: 
+						</td> 
+						<td> 
+							<input type="text" 
+							       name="name" 
+								   id="VIOLIN_SESSIONS" 
+								   value="0" 
+								   class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" 
+								   disabled="disabled" 
+								   style="width:30%;"> 
+						</td>
+						<td> 	
+							<a	href="#" 
+								class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+								data-theme="a" 
+								style=""
+								onclick="increment_hours('#VIOLIN_SESSIONS');">+1
+							</a> 
+                   
+						</td>
+					</tr>
+	
+					<tr>
+						<td> 
+							Workout: 
+						</td>
+						<td>
+							<input 	type="text" 
+									name="name" 
+									id="WORKOUT_SESSIONS" 
+									value="0" 
+									class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" 
+									disabled="disabled"               			   
+									style="width:30%;"> 
+						</td>
+						<td> 	
+							<a 	href="#" 
+								class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+								data-theme="a"
+								id="workout_hour"
+								style=""
+								onclick="increment_hours('#WORKOUT_SESSIONS');">+1</a>    
+						</td>
+					</tr>
+	
+					<tr>
+						<td> 
+							Hours Available: 
+						</td>
+						<td>
+							<input 	type="text" 
+									name="name" 
+									id="HOURS_AVAILABLE" 
+									value="0" 
+									class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" 
+									disabled="disabled" 
+									style="width:30%;">
+						</td>	
+	  
+						<td>
+							<a 	href="#" 
+								class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+								data-theme="a"
+								onclick="decrement_free_hours();"
+								style="padding:2px;">-1
+							</a> 
+						</td>
+					</tr>	
+				</table>
+			</form>
+  
+			<div style="padding:10px;">
+				<label style="color:midnightblue;"> Hours become available when:
+				<ul>
+					<li style="padding:4px;color:midnightblue;"> Plan 1: 1_MEDICINE, 3_SIDE_PROJECT, 1_VIOLIN </li>
+					<li style="padding:4px;color:midnightblue;"> Plan 2: 2_MEDICINE, 1_SIDE_PROJECT, 1_WORKOUT</li>
+					<li style="padding:4px;color:midnightblue;"> Plan 3: 2_VIOLIN, 2_SIDE_PROJECT, 1_MEDICINE</li>
+					<li style="padding:4px;color:midnightblue;"> Plan 4: 4_WORKOUT</li>
+					<li style="padding:4px;color:midnightblue;"> Plan 5: 4_SIDE_PROJECT</li>
+					<li style="padding:4px;color:midnightblue;"> Plan 6: 4_MEDICINE</li>
+				</ul> 
+				<label style="color:midnightblue;"> Each session is one hour/Violin is 45 mins. </label>
+				<label style="color:midnightblue;"> Each reward is one hour and half </label>
+			</div>
+		</div>
+	</div>
+
+	<!-- TODO List -->
+	<div class="to_do">
+		<div	data-role="collapsible" 
+				data-collapsed="true" 
+				data-theme="e" 
+				id="violin"
+				data-content-theme="c">
+			<h3>
+				Violin
+			</h3>
+        
+			<a	href="#dialog" 
+				class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+				data-theme="b"
+				name="modal"
+				style="width:30px;align:right;">+1
+			</a>
+		</div>	
+  
+		<div 	data-role="collapsible" 
+				data-collapsed="true" 
+				data-theme="e" 
+				id="medicine"
+				data-content-theme="c">
+			<h3>
+				Medicine             
+			</h3>
+		
+			<a 	href="#dialog"
+				class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+				data-theme="b"
+				name="modal"
+				style="width:30px;align:right;">+1
+			</a>
+		</div>
+	
+		<div	data-role="collapsible" 
+				data-collapsed="true"
+				data-theme="e" 
+				id="side_project"
+				data-content-theme="c">
+				<h3>
+					Side Project
+				</h3>
+       
+				<a  class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+					data-theme="b"
+					href="#dialog"
+					name="modal"
+					style="width:30px;align:right;">+1
+				</a> 		
+		</div>
+	
+		<div 	data-role="collapsible" 
+				data-collapsed="true" 
+				data-theme="e" 
+				id="misc"
+				data-content-theme="c">
+				<h3>
+					Miscellaneous
+				</h3>	
+	 
+				<a 	href="#dialog"
+					id="misc_add"
+					class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a" 
+					data-theme="b"
+					name="modal"
+					style="width:30px;align:right;">+1
+				</a>	
+		</div>
+	</div>	 
+	
+	<!-- New TODO -->
+	<div 	id="dialog" 
+			class="window">
+			<div 	data-role="header" 
+					data-theme="d" 
+					data-position="inline">
+					<h1>
+						Add TODO Text
+					</h1>
+			</div>
+
+			<div	data-role="content" 
+					data-theme="a">
+					<h1>
+						Item Description
+					</h1>
+		
+					<input 	type="text" 
+							name="name" 
+							value="0" 
+							id="todo_text"	
+							class="ui-input-text ui-body-null ui-corner-all ui-shadow-inset ui-body-c" 
+							style="width:100%;height:15%;">
+			 
+					<div style="width:100%;margin-top:40px;">
+						<a 	href="#" 
+							class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a save" 
+							data-theme="a" 
+							style="float:left;width:45%;" >Save
+						</a>
+			
+						<a 	href="#" 
+							class="ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a close"
+							data-theme="a" 
+							style="width:40%;float:right;" >Cancel
+						</a>
+       
+						<div style="clear:both;"></div> 
+					</div>
+			</div>
+		</div>
+		<div id="mask"></div>
+	</body>
+</html>
