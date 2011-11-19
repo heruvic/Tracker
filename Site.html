@@ -85,12 +85,20 @@
 		read_trade();
 		read_todo();
 	}
+	
+	function getReadURL() {
+		return 'http://localhost/james/read_from_db.php';
+	}
 
+	function getWriteURL() {
+		return 'http://localhost/james/write_to_db.php';
+	}
+	
 	/**
 	  *
 	  */
 	function read_days() {
-		$.get('http://192.168.0.30/james/read_from_db.php?extraArgs={"params": ["id", "day_count", "last_updated"]}&table=days', function(data) {			
+		$.get(getReadURL() + '?extraArgs={"params": ["id", "day_count", "last_updated"]}&table=days', function(data) {			
 			var results = JSON.parse(data);
 			$('#NO_DAYS').val(results[0].day_count);
 			$('#LAST_UPDATED').val(results[0].last_updated);
@@ -101,15 +109,15 @@
 	  *
 	  */	
 	function save_days(count, last_updated) {
-		$.get('http://192.168.0.30/james/write_to_db.php?status=alter&paramName=day_count&table=days&paramValue=' + count);
-		$.get('http://192.168.0.30/james/write_to_db.php?status=alter&paramName=last_updated&table=days&paramValue=' + last_updated);
+		$.get(getWriteURL() + '?status=alter&paramName=day_count&table=days&paramValue=' + count);
+		$.get(getWriteURL() + '?status=alter&paramName=last_updated&table=days&paramValue=' + last_updated);
 	}
 
 	/**
 	  *
 	  */	
 	function read_trade() {
-		$.get('http://192.168.0.30/james/read_from_db.php?extraArgs={"params": ["category", "count"]}&table=trade', function(data) {
+		$.get(getReadURL() + '?extraArgs={"params": ["category", "count"]}&table=trade', function(data) {
 			var results = JSON.parse(data);
 			$('#MEDICINE_SESSIONS').val(results[0].count);
 			$('#SIDE_PROJECT_SESSION').val(results[1].count);
@@ -123,14 +131,14 @@
 	  *
 	  */	
 	function save_trade(category, count) {
-		$.get('http://192.168.0.30/james/write_to_db.php?status=alter&table=trade&category=' + category + '&count=' + count);
+		$.get(getWriteURL() + '?status=alter&table=trade&category=' + category + '&count=' + count);
 	}
 	
 	/**
 	  *
 	  */	
 	function read_todo() {
-		$.get('http://192.168.0.30/james/read_from_db.php?extraArgs={"params": ["number", "category", "text"]}&table=todo', function(data) {			
+		$.get(getReadURL() + '?extraArgs={"params": ["number", "category", "text"]}&table=todo', function(data) {			
 			var results = JSON.parse(data);
 			
 			var i;
@@ -148,14 +156,14 @@
 	  *
 	  */	
 	function save_todo(category, text) { 
-		$.get('http://192.168.0.30/james/write_to_db.php?status=new&table=todo&category=' + category + '&number=' + todo_number + '&text="' + text + '"');
+		$.get(getWriteURL() + '?status=new&table=todo&category=' + category + '&number=' + todo_number + '&text="' + text + '"');
 	}
 	
 	/**
 	  *
 	  */
 	function delete_todo(number, category) {
-		$.get('http://192.168.0.30/james/write_to_db.php?status=delete&table=todo&category=' + category + '&number=' + number);
+		$.get(getWriteURL() + '?status=delete&table=todo&category=' + category + '&number=' + number);
 	}
 		
 	/**
@@ -174,7 +182,8 @@
 	
 			//Get the screen height and width
 			var maskHeight = $(document).height();
-			var maskWidth = $(window).width();
+			var maskWidth = $(window).width();
+
 	
 			//Set heigth and width to mask to fill up the whole screen
 			$('#mask').css({'width':maskWidth,'height':maskHeight});
@@ -221,7 +230,7 @@
 			e.preventDefault();
 			$('#mask').hide();
 			$('.window').hide();
-			$('#cristina').val("");
+			$('#todo_text').val("");
 		});
 	});
 
@@ -231,7 +240,9 @@
 	function add_html(id, text) {
 		var p = document.createElement("p");
 		var label = document.createElement("label");
-		label.innerHTML = text;
+		
+		label.innerHTML = text.replace(/['"]/g,'');
+		
 		var a = document.createElement("a");
 		a.setAttribute("href", "#");
 		a.setAttribute("class", "ui-btn-left ui-btn ui-btn-icon-left ui-btn-corner-all ui-shadow ui-btn-up-a");
